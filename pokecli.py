@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 pgoapi - Pokemon Go API
 Copyright (c) 2016 tjado <https://github.com/tejado>
@@ -24,6 +25,7 @@ OR OTHER DEALINGS IN THE SOFTWARE.
 Author: tjado <https://github.com/tejado>
 """
 
+<<<<<<< HEAD
 ## system imports
 from argparse import ArgumentParser
 from codecs import getwriter
@@ -36,22 +38,56 @@ import sys
 
 ## user imports
 from bot import PokemonGoBot
+=======
+import os
+import re
+import json
+import argparse
+import time
+import ssl
+import sys
+import codecs
+from getpass import getpass
+import logging
+import requests
+from pokemongo_bot import logger
+from pokemongo_bot import PokemonGoBot
+from pokemongo_bot.cell_workers.utils import print_green, print_yellow, print_red
+>>>>>>> upstream/master
 
 if sys.version_info >= (2, 7, 9):
     ssl._create_default_https_context = ssl._create_unverified_context
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> upstream/master
 def init_config():
     parser = ArgumentParser()
     config_file = "config.json"
+    release_config_json = "release_config.json"
+    web_dir = "web"
 
     # If config file exists, load variables from json
     load = {}
+<<<<<<< HEAD
     if isfile(config_file):
+=======
+
+    # Select a config file code
+    parser.add_argument("-cf", "--config", help="Config File to use")
+    config_arg = unicode(parser.parse_args().config)
+    if os.path.isfile(config_arg):
+        with open(config_arg) as data:
+            load.update(json.load(data))
+    elif os.path.isfile(config_file):
+>>>>>>> upstream/master
         with open(config_file) as data:
             load.update(read_json(data))
 
     # Read passed in Arguments
     required = lambda x: not x in load
+<<<<<<< HEAD
     parser.add_argument("-a", "--auth_service", help="Auth Service ('ptc' or 'google')",
         required=required("auth_service"))
     parser.add_argument("-u", "--username", help="Username", required=required("username"))
@@ -66,18 +102,137 @@ def init_config():
     parser.add_argument("-d", "--debug", help="Debug Mode", action='store_true')
     parser.add_argument("-t", "--test", help="Only parse the specified location", action='store_true')
     parser.set_defaults(DEBUG=False, TEST=False)
-    config = parser.parse_args()
+=======
+    parser.add_argument("-a",
+                        "--auth_service",
+                        help="Auth Service ('ptc' or 'google')",
+                        required=required("auth_service"))
+    parser.add_argument("-u", "--username", help="Username")
+    parser.add_argument("-p", "--password", help="Password")
+    parser.add_argument("-l", "--location", help="Location")
+    parser.add_argument("-lc",
+                        "--location_cache",
+                        help="Bot will start at last known location",
+                        type=bool,
+                        default=False)
+    parser.add_argument("-m",
+                        "--mode",
+                        help="Farming Mode",
+                        type=str,
+                        default="all")
+    parser.add_argument(
+        "-w",
+        "--walk",
+        help=
+        "Walk instead of teleport with given speed (meters per second, e.g. 2.5)",
+        type=float,
+        default=2.5)
+    parser.add_argument("-k",
+                        "--gmapkey",
+                        help="Set Google Maps API KEY",
+                        type=str,
+                        default=None)
+    parser.add_argument(
+        "-ms",
+        "--max_steps",
+        help=
+        "Set the steps around your initial location(DEFAULT 5 mean 25 cells around your location)",
+        type=int,
+        default=50)
+    parser.add_argument(
+        "-it",
+        "--initial_transfer",
+        help=
+        "Transfer all duplicate pokemon with same ID on bot start, except pokemon with highest CP. Accepts a number to prevent transferring pokemon with a CP above the provided value.  Default is 0 (aka transfer none).",
+        type=int,
+        default=0)
+    parser.add_argument("-d",
+                        "--debug",
+                        help="Debug Mode",
+                        type=bool,
+                        default=False)
+    parser.add_argument("-t",
+                        "--test",
+                        help="Only parse the specified location",
+                        type=bool,
+                        default=False)
+    parser.add_argument(
+        "-du",
+        "--distance_unit",
+        help=
+        "Set the unit to display distance in (e.g, km for kilometers, mi for miles, ft for feet)",
+        type=str,
+        default="km")
 
-    # Passed in arguments shoud trump
+    parser.add_argument(
+        "-if",
+        "--item_filter",
+        help=
+        "Pass a list of unwanted items to recycle when collected at a Pokestop (e.g, \"101,102,103,104\" to recycle potions when collected)",
+        type=str,
+        default=[])
+
+    parser.add_argument("-ev",
+                        "--evolve_all",
+                        help="(Batch mode) Pass \"all\" or a list of pokemons to evolve (e.g., \"Pidgey,Weedle,Caterpie\"). Bot will start by attempting to evolve all pokemons. Great after popping a lucky egg!",
+                        type=str,
+                        default=[])
+
+    parser.add_argument("-ec",
+                        "--evolve_captured",
+                        help="(Ad-hoc mode) Bot will attempt to evolve all the pokemons captured!",
+                        type=bool,
+                        default=False)
+
+>>>>>>> upstream/master
+    config = parser.parse_args()
+    if not config.username and 'username' not in load:
+        config.username = raw_input("Username: ")
+    if not config.password and 'password' not in load:
+        config.password = getpass("Password: ")
+
+    # Passed in arguments should trump
     for key in config.__dict__:
+<<<<<<< HEAD
         if key in load and config.__dict__[key] is None:
             config.__dict__[key] = load[key]
 
     if config.auth_service not in ['ptc', 'google']:
         logging.error("Invalid Auth service ('%s') specified! ('ptc' or 'google')", config.auth_service)
         return None
+=======
+        if key in load:
+            config.__dict__[key] = load[key]
+
+    if config.auth_service not in ['ptc', 'google']:
+        logging.error("Invalid Auth service specified! ('ptc' or 'google')")
+        return None
+
+    if not (config.location or config.location_cache):
+        parser.error("Needs either --use-location-cache or --location.")
+        return None
+
+    if config.item_filter:
+        config.item_filter = [str(item_id) for item_id in config.item_filter.split(',')]
+
+    config.release_config = {}
+    if os.path.isfile(release_config_json):
+        with open(release_config_json) as data:
+            config.release_config.update(json.load(data))
+
+    # create web dir if not exists
+    try: 
+        os.makedirs(web_dir)
+    except OSError:
+        if not os.path.isdir(web_dir):
+            raise
+
+    if config.evolve_all:
+        config.evolve_all = [str(pokemon_name) for pokemon_name in config.evolve_all.split(',')]
+>>>>>>> upstream/master
 
     return config
+
 
 def main():
     # log settings
@@ -87,28 +242,28 @@ def main():
     sys.stdout = getwriter('utf8')(sys.stdout)
     sys.stderr = getwriter('utf8')(sys.stderr)
 
+<<<<<<< HEAD
     # @eggins clean log
     print '[x] Initializing PokemonGO Bot v1.0'
     sleep(1)
     print '[x] PokemonGo Bot [@PokemonGoF | @eggins | @crack00r | @ethervoid | /r/pokemongodev]'
 
+=======
+>>>>>>> upstream/master
     config = init_config()
     if not config:
         return
 
-    if config.debug:
-        # log level for http request class
-        logging.getLogger("requests").setLevel(logging.WARNING)
-        # log level for main pgoapi class
-        logging.getLogger("pgoapi").setLevel(logging.INFO)
-        # log level for internal pgoapi class
-        logging.getLogger("rpc_api").setLevel(logging.INFO)
+    logger.log('[x] PokemonGO Bot v1.0', 'green')
+    logger.log('[x] Configuration initialized', 'yellow')
 
-    if config.debug:
-        logging.getLogger("requests").setLevel(logging.DEBUG)
-        logging.getLogger("pgoapi").setLevel(logging.DEBUG)
-        logging.getLogger("rpc_api").setLevel(logging.DEBUG)
+    try:
+        bot = PokemonGoBot(config)
+        bot.start()
 
+        logger.log('[x] Starting PokemonGo Bot....', 'green')
+
+<<<<<<< HEAD
     print '[x] Configuration Initialized'
 
     try:
@@ -119,6 +274,16 @@ def main():
             bot.take_step()
     except KeyboardInterrupt:
         print '[ USER ABORTED, EXITING.. ]'
+=======
+        while True:
+            bot.take_step()
+
+    except KeyboardInterrupt:
+        logger.log('[x] Exiting PokemonGo Bot', 'red')
+        # TODO Add number of pokemon catched, pokestops visited, highest CP
+        # pokemon catched, etc.
+
+>>>>>>> upstream/master
 
 if __name__ == '__main__':
     main()
